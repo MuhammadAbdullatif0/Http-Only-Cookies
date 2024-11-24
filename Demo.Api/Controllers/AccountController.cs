@@ -12,6 +12,7 @@ namespace Demo.Api.Controllers
     [ApiController]
     public class AccountController(
         UserManager<ApplicationUser> _userManager,
+        SignInManager<ApplicationUser> _signManager,
         TokenService tokenService) : ControllerBase
     {
         [HttpPost("login")]
@@ -20,7 +21,6 @@ namespace Demo.Api.Controllers
             var user = await _userManager.FindByEmailAsync(loginDto.UserName);
             if (user == null || !(await _userManager.CheckPasswordAsync(user, loginDto.Password)))
                 return Unauthorized("Invalid credentials.");
-
             var tokenString = tokenService.CreateToken(user);
 
             Response.Cookies.Append("jwt", tokenString, new CookieOptions
@@ -61,6 +61,22 @@ namespace Demo.Api.Controllers
                 user.Email,
                 user.UserName,
             });
+        }
+
+        [HttpPost("logout")]
+        [Authorize]
+        public IActionResult Logout()
+        {        
+            _signManager.SignOutAsync();
+            Response.Cookies.Delete("jwt"); 
+
+            return Ok(new { message = "Logout successful" });
+        }
+
+        [HttpGet("auth-status")]
+        public ActionResult GetAuthState()
+        {
+            return Ok(new { IsAuthenticated = User.Identity?.IsAuthenticated ?? false });
         }
     }
 }
